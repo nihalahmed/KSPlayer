@@ -148,6 +148,10 @@ public final class MEPlayerItem: Sendable {
         }
     }
 
+    deinit {
+        av_log_set_callback(nil)
+    }
+
     func select(track: some MediaPlayerTrack) -> Bool {
         if track.isEnabled {
             return false
