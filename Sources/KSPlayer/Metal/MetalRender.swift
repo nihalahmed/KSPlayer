@@ -174,7 +174,16 @@ class MetalRender {
                 return nil
             }
             let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: formats[i], width: widths[i], height: heights[i], mipmapped: false)
+            #if targetEnvironment(macCatalyst)
+            let version = ProcessInfo().operatingSystemVersion
+            if version.majorVersion == 10 && version.minorVersion == 15 && [5, 4, 2].contains(version.patchVersion) {
+                descriptor.storageMode = .private
+            } else {
+                descriptor.storageMode = buffer.storageMode
+            }
+            #else
             descriptor.storageMode = buffer.storageMode
+            #endif
             return buffer.makeTexture(descriptor: descriptor, offset: 0, bytesPerRow: lineSizes[i])
         }
     }
