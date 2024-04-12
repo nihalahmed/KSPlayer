@@ -52,6 +52,17 @@ public class KSMEPlayer: NSObject {
         _pipController as? KSPictureInPictureController
     }
 
+    @available(iOS 15.0, tvOS 15.0, macOS 12.0, *)
+    public var pipControllerSource: AVPictureInPictureController.ContentSource? { _pipControllerSource as? AVPictureInPictureController.ContentSource }
+
+    private lazy var _pipControllerSource: Any? = {
+        if #available(iOS 15.0, tvOS 15.0, macOS 12.0, *), let videoOutput {
+            return AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoOutput.displayLayer, playbackDelegate: self)
+        } else {
+            return nil
+        }
+    }()
+    
     private lazy var _playbackCoordinator: Any? = {
         if #available(macOS 12.0, iOS 15.0, tvOS 15.0, *) {
             let coordinator = AVDelegatingPlaybackCoordinator(playbackControlDelegate: self)

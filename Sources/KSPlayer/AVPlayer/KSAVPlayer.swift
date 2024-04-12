@@ -67,6 +67,7 @@ public final class KSAVPlayerView: UIView {
 
 @MainActor
 public class KSAVPlayer {
+    private var deinitHandler: (() -> Void)?
     private var cancellable: AnyCancellable?
     private var options: KSOptions {
         didSet {
@@ -111,6 +112,17 @@ public class KSAVPlayer {
     public var pipController: KSPictureInPictureController? {
         _pipController as? KSPictureInPictureController
     }
+
+    @available(iOS 15.0, tvOS 15.0, macOS 12.0, *)
+    public var pipControllerSource: AVPictureInPictureController.ContentSource? { _pipControllerSource as? AVPictureInPictureController.ContentSource }
+
+    private lazy var _pipControllerSource: Any? = {
+        if #available(iOS 15.0, tvOS 15.0, macOS 12.0, *) {
+            return AVPictureInPictureController.ContentSource(playerLayer: playerView.playerLayer)
+        } else {
+            return nil
+        }
+    }()
 
     public var naturalSize: CGSize = .zero
     public let dynamicInfo: DynamicInfo? = nil
@@ -219,6 +231,13 @@ public class KSAVPlayer {
             guard let self else { return }
             self.observer(playerItem: player.currentItem)
         }
+        deinitHandler = { [weak self] in
+            self?.shutdown()
+        }
+    }
+    
+    deinit {
+        deinitHandler?()
     }
 }
 
@@ -437,17 +456,30 @@ extension KSAVPlayer: MediaPlayerProtocol {
     }
 
     public func shutdown() {
+        shutdown(completely: true)
+    }
+
+    private func shutdown(completely: Bool) {
         KSLog("shutdown \(self)")
         isReadyToPlay = false
         playbackState = .stopped
         loadState = .idle
         urlAsset.cancelLoading()
+        if !completely {
+            player.currentItem?.cancelPendingSeeks()
+            if options.isLoopPlay {
+                loopCountObservation?.invalidate()
+                loopStatusObservation?.invalidate()
+                playerLooper?.disableLooping()
+            }
+            return
+        }
         replaceCurrentItem(playerItem: nil)
     }
 
     public func replace(url: URL, options: KSOptions) {
         KSLog("replaceUrl \(self)")
-        shutdown()
+        shutdown(completely: false)
         urlAsset = AVURLAsset(url: url, options: options.avOptions)
         self.options = options
     }

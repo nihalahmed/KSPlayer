@@ -6,6 +6,7 @@
 //
 
 import AVFoundation
+import AVKit
 import Foundation
 #if canImport(UIKit)
 import UIKit
@@ -86,6 +87,8 @@ public protocol MediaPlayerProtocol: MediaPlayback {
     var playbackCoordinator: AVPlaybackCoordinator { get }
     @available(tvOS 14.0, *)
     var pipController: KSPictureInPictureController? { get }
+    @available(iOS 15.0, tvOS 15.0, macOS 12.0, *)
+    var pipControllerSource: AVPictureInPictureController.ContentSource? { get }
     var dynamicInfo: DynamicInfo? { get }
     init(url: URL, options: KSOptions)
     func replace(url: URL, options: KSOptions)
