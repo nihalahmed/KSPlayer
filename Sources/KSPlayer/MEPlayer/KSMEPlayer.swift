@@ -338,6 +338,7 @@ extension KSMEPlayer: MediaPlayerProtocol {
         }
         self.options = options
         playerItem.delegate = self
+        audioOutput.flush()
         audioOutput.renderSource = playerItem
         videoOutput?.renderSource = playerItem
         videoOutput?.options = options
