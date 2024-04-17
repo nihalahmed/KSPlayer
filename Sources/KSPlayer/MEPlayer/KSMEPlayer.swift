@@ -39,7 +39,7 @@ public class KSMEPlayer: NSObject {
 
     private lazy var _pipController: Any? = {
         if #available(iOS 15.0, tvOS 15.0, macOS 12.0, *), let videoOutput {
-            let contentSource = AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoOutput.displayLayer, playbackDelegate: self)
+            let contentSource = AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoOutput.displayLayer, playbackDelegate: SampleBufferPlaybackDelegate(player: self))
             let pip = KSPictureInPictureController(contentSource: contentSource)
             return pip
         } else {
@@ -57,7 +57,7 @@ public class KSMEPlayer: NSObject {
 
     private lazy var _pipControllerSource: Any? = {
         if #available(iOS 15.0, tvOS 15.0, macOS 12.0, *), let videoOutput {
-            return AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoOutput.displayLayer, playbackDelegate: self)
+            return AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoOutput.displayLayer, playbackDelegate: SampleBufferPlaybackDelegate(player: self))
         } else {
             return nil
         }
@@ -595,5 +595,41 @@ public extension KSMEPlayer {
 
     func stoptRecord() {
         playerItem.stopRecord()
+    }
+}
+
+@available(iOS 15.0, tvOS 15.0, macOS 12.0, *)
+private class SampleBufferPlaybackDelegate: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
+    weak var player: KSMEPlayer?
+    
+    init(player: KSMEPlayer) {
+        self.player = player
+    }
+    
+    public func pictureInPictureController(_: AVPictureInPictureController, setPlaying playing: Bool) {
+        playing ? player?.play() : player?.pause()
+    }
+    
+    public func pictureInPictureControllerTimeRangeForPlayback(_: AVPictureInPictureController) -> CMTimeRange {
+        // Handle live streams.
+        guard let player = player, player.duration > 0 else {
+            return CMTimeRange(start: .negativeInfinity, duration: .positiveInfinity)
+        }
+        return CMTimeRange(start: 0, end: player.duration)
+    }
+    
+    public func pictureInPictureControllerIsPlaybackPaused(_: AVPictureInPictureController) -> Bool {
+        !(player?.isPlaying ?? false)
+    }
+    
+    public func pictureInPictureController(_: AVPictureInPictureController, didTransitionToRenderSize _: CMVideoDimensions) {}
+    
+    public func pictureInPictureController(_: AVPictureInPictureController, skipByInterval skipInterval: CMTime) async {
+        guard let player = player else { return }
+        player.seek(time: player.currentPlaybackTime + skipInterval.seconds) { _ in }
+    }
+    
+    public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_: AVPictureInPictureController) -> Bool {
+        false
     }
 }
